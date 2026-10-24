@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"    // client yahan generate hoga
+}
+
+datasource db {
+  provider = "postgresql"             // url yahan NAHI likhna
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  password     String                       // bcrypt se hashed
+  role         Role          @default(SEEKER)
+  jobs         Job[]
+  applications Application[]
+}
+
+model Job {
+  id           String        @id @default(cuid())
+  title        String
+  company      String
+  location     String                       // "Remote" ya city
+  salary       String?
+  description  String
+  status       JobStatus     @default(PENDING)   // admin approve karega
+  employer     User          @relation(fields: [employerId], references: [id])
+  employerId   String
+  applications Application[]
+  createdAt    DateTime      @default(now())
+}
+
+model Application {
+  id        String    @id @default(cuid())
+  status    AppStatus @default(PENDING)
+  job       Job       @relation(fields: [jobId], references: [id])
+  jobId     String
+  seeker    User      @relation(fields: [seekerId], references: [id])
+  seekerId  String
+  @@unique([jobId, seekerId])               // ek job par ek hi baar apply
+}
+
+enum Role {
+  SEEKER
+  EMPLOYER
+  ADMIN
+}
+
+enum JobStatus {
+  PENDING
+  LIVE
+  CLOSED
+}
+
+enum AppStatus {
+  PENDING
+  REVIEWED
+  INTERVIEW
+  REJECTED
+}
