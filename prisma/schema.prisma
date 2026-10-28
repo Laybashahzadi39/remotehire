@@ -15,6 +15,10 @@ model User {
   role         Role          @default(SEEKER)
   jobs         Job[]
   applications Application[]
+  trusted      Boolean       @default(false) 
+  blocked      Boolean       @default(false)
+  reports      Report[]
+  profile      Profile?
 }
 
 model Job {
@@ -25,9 +29,12 @@ model Job {
   salary       String?
   description  String
   status       JobStatus     @default(PENDING)   // admin approve karega
+  workMode     WorkMode  @default(REMOTE)
+  jobType      JobType   @default(FULL_TIME)
   employer     User          @relation(fields: [employerId], references: [id])
   employerId   String
   applications Application[]
+  reports      Report[]
   createdAt    DateTime      @default(now())
 }
 
@@ -37,8 +44,21 @@ model Application {
   job       Job       @relation(fields: [jobId], references: [id])
   jobId     String
   seeker    User      @relation(fields: [seekerId], references: [id])
+  coverNote String?
+  createdAt DateTime @default(now())
   seekerId  String
   @@unique([jobId, seekerId])               // ek job par ek hi baar apply
+}
+model Profile {
+  id         String  @id @default(cuid())
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String  @unique
+  headline   String?
+  location   String?
+  skills     String?   // comma separated: "React, Node, SQL"
+  summary    String?
+  resumeName String?
+  resumeData Bytes?    // PDF ke bytes (private)
 }
 
 enum Role {
@@ -51,11 +71,50 @@ enum JobStatus {
   PENDING
   LIVE
   CLOSED
+  REJECTED
+  HIDDEN
 }
-
 enum AppStatus {
   PENDING
   REVIEWED
   INTERVIEW
   REJECTED
+}
+enum WorkMode {
+  REMOTE
+  HYBRID
+  ONSITE
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+}
+model Report {
+  id         String       @id @default(cuid())
+  reason     ReportReason
+  details    String?
+  status     ReportStatus @default(OPEN)
+  job        Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId      String
+  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId String
+  createdAt  DateTime     @default(now())
+
+  @@unique([jobId, reporterId])   // ek user ek job ko ek hi baar report kare
+}
+
+enum ReportReason {
+  ASKS_FOR_MONEY
+  FAKE_COMPANY
+  MISLEADING
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
 }

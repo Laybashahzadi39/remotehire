@@ -1,0 +1,9 @@
+-- CreateEnum
+CREATE TYPE "WorkMode" AS ENUM ('REMOTE', 'HYBRID', 'ONSITE');
+
+-- CreateEnum
+CREATE TYPE "JobType" AS ENUM ('FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERNSHIP');
+
+-- AlterTable
+ALTER TABLE "Job" ADD COLUMN     "jobType" "JobType" NOT NULL DEFAULT 'FULL_TIME',
+ADD COLUMN     "workMode" "WorkMode" NOT NULL DEFAULT 'REMOTE';
