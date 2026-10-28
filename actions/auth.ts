@@ -47,6 +47,7 @@ export async function login(prev: FormState, formData: FormData): Promise<FormSt
 
   // Dono galti par ek hi message (security: attacker ko hint nahi milta)
   if (!user || !match) return { error: "Invalid email or password" };
+  if (user.blocked) return { error: "This account has been suspended." };
 
   await createSession(user.id, user.role);
   redirect("/dashboard");

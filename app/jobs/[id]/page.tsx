@@ -3,12 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { applyToJob } from "@/actions/applications";
+import ApplyForm from "@/components/ApplyForm";
 import CompanyAvatar from "@/components/CompanyAvatar";
 import StatusBadge from "@/components/StatusBadge";
 import { formatDate } from "@/lib/format";
+import ReportJob from "@/components/ReportJob";
 
-// Side card ki ek line (label + value)
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4 border-b border-[#22345A] py-3 text-sm last:border-0">
@@ -24,24 +24,31 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
   if (!job || job.status !== "LIVE") notFound();
 
   const session = await getSession();
-  const applied =
-    session?.role === "SEEKER"
-      ? await prisma.application.findUnique({
-          where: { jobId_seekerId: { jobId: id, seekerId: session.userId } },
-        })
-      : null;
+  const isSeeker = session?.role === "SEEKER";
+
+  // Seeker ke liye: pehle apply kiya? resume hai?
+  const applied = isSeeker
+    ? await prisma.application.findUnique({
+        where: { jobId_seekerId: { jobId: id, seekerId: session.userId } },
+      })
+    : null;
+  const profile = isSeeker
+    ? await prisma.profile.findUnique({
+        where: { userId: session.userId },
+        select: { resumeName: true },
+      })
+    : null;
 
   return (
     <div className="mx-auto max-w-5xl">
       <Link href="/jobs" className="text-sm font-semibold text-teal-300">← Back to jobs</Link>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Left: role ki detail */}
-        <article className="rounded-2xl border border-[#22345A] bg-[#142544] p-8">
+        <article className="rounded-2xl border border-[#22345A] bg-[#142544] p-6 sm:p-8">
           <div className="flex items-center gap-4">
             <CompanyAvatar name={job.company} large />
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">{job.title}</h1>
+              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{job.title}</h1>
               <p className="mt-1 text-[#A9B8D2]">{job.company}</p>
             </div>
           </div>
@@ -49,7 +56,6 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
           <p className="mt-3 whitespace-pre-line leading-7 text-[#C9D5EA]">{job.description}</p>
         </article>
 
-        {/* Right: details + Apply (scroll par sath rehta hai) */}
         <aside className="h-fit rounded-2xl border border-[#22345A] bg-[#142544] p-6 lg:sticky lg:top-24">
           <Detail label="Location" value={job.location} />
           <Detail label="Salary" value={job.salary ?? "Not specified"} />
@@ -62,23 +68,21 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
               </Link>
             )}
 
-            {session?.role === "SEEKER" &&
+            {isSeeker &&
               (applied ? (
                 <div className="rounded-lg bg-[#0E1A2F] p-4 text-center">
                   <p className="mb-2 text-sm text-[#A9B8D2]">You applied for this job</p>
                   <StatusBadge status={applied.status} />
                 </div>
               ) : (
-                <form action={applyToJob}>
-                  <input type="hidden" name="jobId" value={job.id} />
-                  <button className="w-full rounded-lg bg-teal-300 py-3 font-bold text-[#0E1A2F]">Apply now</button>
-                </form>
+                <ApplyForm jobId={job.id} hasResume={!!profile?.resumeName} />
               ))}
 
-            {session && session.role !== "SEEKER" && (
+            {session && !isSeeker && (
               <p className="text-center text-sm text-[#A9B8D2]">Only job seekers can apply.</p>
             )}
           </div>
+                    {session && <ReportJob jobId={job.id} />}
         </aside>
       </div>
     </div>

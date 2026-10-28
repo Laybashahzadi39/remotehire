@@ -82,7 +82,7 @@ export default function Home() {
           <input
             name="q"
             placeholder="Job title, company or skill"
-            className="h-12 flex-1 rounded-lg bg-[#0E1A2F] px-4 outline-none placeholder:text-[#7D8DAA]"
+            className="h-12 w-full rounded-lg bg-[#0E1A2F] px-4 outline-none placeholder:text-[#7D8DAA] sm:flex-1"
           />
           <button className="h-12 rounded-lg bg-teal-300 px-8 font-bold text-[#0E1A2F]">Search jobs</button>
         </form>

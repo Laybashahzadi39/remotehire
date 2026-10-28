@@ -1,33 +1,34 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 import { logout } from "@/actions/auth";
+import MobileMenu from "@/components/MobileMenu";
 
 const linkStyle = "text-sm font-medium text-[#C9D5EA] hover:text-white";
 
-// Cookie parh kar links chunta hai (isliye Suspense ke andar rakha hai)
 async function NavLinks() {
   const session = await getSession();
+  const user = session
+    ? await prisma.user.findUnique({ where: { id: session.userId }, select: { name: true } })
+    : null;
 
-  // Login nahi hai
-  if (!session) {
-    return (
-      <>
-        <Link href="/jobs" className={linkStyle}>Browse jobs</Link>
-        <Link href="/login" className={linkStyle}>Log in</Link>
-        <Link href="/signup" className="rounded-lg bg-teal-300 px-4 py-2 text-sm font-bold text-[#0E1A2F]">
-          Sign up
-        </Link>
-      </>
-    );
-  }
-
-  return (
+  // Links ek hi baar banate hain, desktop aur mobile dono mein wahi use hote hain
+  const links = !session ? (
+    <>
+      <Link href="/jobs" className={linkStyle}>Browse jobs</Link>
+      <Link href="/login" className={linkStyle}>Log in</Link>
+      <Link href="/signup" className="rounded-lg bg-teal-300 px-4 py-2 text-center text-sm font-bold text-[#0E1A2F]">
+        Sign up
+      </Link>
+    </>
+  ) : (
     <>
       {session.role === "SEEKER" && (
         <>
           <Link href="/jobs" className={linkStyle}>Browse jobs</Link>
           <Link href="/dashboard/seeker" className={linkStyle}>My applications</Link>
+          <Link href="/dashboard/seeker/profile" className={linkStyle}>My profile</Link>
         </>
       )}
       {session.role === "EMPLOYER" && (
@@ -40,12 +41,24 @@ async function NavLinks() {
         <Link href="/dashboard/admin" className={linkStyle}>Admin panel</Link>
       )}
 
-      {/* Logout har page par */}
+      <span className="max-w-40 truncate text-sm text-[#7D8DAA]">
+        {user?.name} · {session.role.toLowerCase()}
+      </span>
+
       <form action={logout}>
         <button className="rounded-lg border border-[#3A5287] px-4 py-2 text-sm font-semibold text-[#E8EEF8] hover:border-teal-300">
           Log out
         </button>
       </form>
+    </>
+  );
+
+  return (
+    <>
+      {/* Bade screen: seedhi line mein */}
+      <div className="hidden items-center gap-5 md:flex">{links}</div>
+      {/* Chhoti screen: hamburger */}
+      <MobileMenu>{links}</MobileMenu>
     </>
   );
 }

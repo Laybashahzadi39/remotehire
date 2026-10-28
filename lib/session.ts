@@ -1,10 +1,9 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
 
-// Secret se cookie par "mohar" lagti hai, koi aur fake cookie nahi bana sakta
 const key = new TextEncoder().encode(process.env.SESSION_SECRET);
 
-// Login ke baad cookie banao
 export async function createSession(userId: string, role: string) {
   const token = await new SignJWT({ userId, role })
     .setProtectedHeader({ alg: "HS256" })
@@ -13,7 +12,7 @@ export async function createSession(userId: string, role: string) {
 
   const jar = await cookies();
   jar.set("session", token, {
-    httpOnly: true, // JavaScript se cookie chori nahi ho sakti
+    httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7,
@@ -21,19 +20,29 @@ export async function createSession(userId: string, role: string) {
   });
 }
 
-// Cookie parh kar bataye kaun logged in hai
 export async function getSession() {
   const token = (await cookies()).get("session")?.value;
   if (!token) return null;
+
+  // 1. Cookie asli hai?
+  let userId: string;
   try {
     const { payload } = await jwtVerify(token, key);
-    return { userId: payload.userId as string, role: payload.role as string };
+    userId = payload.userId as string;
   } catch {
-    return null; // cookie fake ya expire
+    return null;
   }
+
+  // 2. User abhi database mein hai aur block nahi? (purani cookie se bhi block user andar nahi aa sakta)
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, blocked: true },
+  });
+  if (!user || user.blocked) return null;
+
+  return { userId, role: user.role as string };
 }
 
-// Logout
 export async function deleteSession() {
   (await cookies()).delete("session");
 }
