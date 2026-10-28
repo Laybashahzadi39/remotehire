@@ -8,8 +8,16 @@ import { requireRole } from "@/lib/auth";
 
 // ---------- SEEKER: apply karna ----------
 export async function applyToJob(formData: FormData) {
-  const session = await requireRole("SEEKER"); // sirf seeker apply kar sakta hai
+  const session = await requireRole("SEEKER");
   const jobId = String(formData.get("jobId"));
+  const coverNote = String(formData.get("coverNote") ?? "").trim().slice(0, 1000);
+
+  // Resume ke bina apply nahi
+  const profile = await prisma.profile.findUnique({
+    where: { userId: session.userId },
+    select: { resumeName: true },
+  });
+  if (!profile?.resumeName) redirect("/dashboard/seeker/profile");
 
   // Job LIVE honi chahiye
   const job = await prisma.job.findUnique({ where: { id: jobId } });
@@ -20,11 +28,13 @@ export async function applyToJob(formData: FormData) {
     where: { jobId_seekerId: { jobId, seekerId: session.userId } },
   });
   if (!exists) {
-    await prisma.application.create({ data: { jobId, seekerId: session.userId } });
+    await prisma.application.create({
+      data: { jobId, seekerId: session.userId, coverNote: coverNote || null },
+    });
   }
 
   redirect("/dashboard/seeker");
-} 
+}
 
 // ---------- EMPLOYER: status badalna ----------
 const StatusSchema = z.enum(["PENDING", "REVIEWED", "INTERVIEW", "REJECTED"]);
@@ -32,30 +42,21 @@ const StatusSchema = z.enum(["PENDING", "REVIEWED", "INTERVIEW", "REJECTED"]);
 export async function updateApplicationStatus(formData: FormData) {
   const session = await requireRole("EMPLOYER");
   const applicationId = String(formData.get("applicationId"));
-  console.log("UPDATE clicked:", applicationId, formData.get("status"));
 
-  // Status sahi value hai?
   const status = StatusSchema.safeParse(formData.get("status"));
-  if (!status.success) {
-    console.log("Invalid status value");
-    return;
-  }
+  if (!status.success) return;
 
   // Sirf apni job ki application badal sakta hai
   const app = await prisma.application.findUnique({
     where: { id: applicationId },
     include: { job: true },
   });
-  if (!app || app.job.employerId !== session.userId) {
-    console.log("Not allowed: application missing or job is not yours");
-    return;
-  }
+  if (!app || app.job.employerId !== session.userId) return;
 
   await prisma.application.update({
     where: { id: applicationId },
     data: { status: status.data },
   });
-  console.log("Status updated to", status.data);
 
   revalidatePath(`/dashboard/employer/${app.jobId}`);
   revalidatePath("/dashboard/seeker");
