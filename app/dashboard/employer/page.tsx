@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
+import { toggleJobOpen } from "@/actions/jobs";
 import CompanyAvatar from "@/components/CompanyAvatar";
 import StatusBadge from "@/components/StatusBadge";
 import { formatDate } from "@/lib/format";
@@ -11,8 +12,10 @@ async function MyJobs() {
   const jobs = await prisma.job.findMany({
     where: { employerId: session.userId },
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { applications: true } } }, // applicants ginti
+    include: { _count: { select: { applications: true } } },
   });
+
+  const btn = "rounded-lg border border-[#3A5287] px-4 py-2 text-sm font-semibold hover:border-teal-300";
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -29,26 +32,38 @@ async function MyJobs() {
       {jobs.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#2A4070] bg-[#142544] p-12 text-center">
           <p className="text-lg font-semibold">You have not posted any jobs yet</p>
-          <p className="mt-1 text-[#A9B8D2]">New jobs go live after admin approval.</p>
+          <p className="mt-1 text-[#A9B8D2]">New employers are reviewed once by an admin.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {jobs.map((job) => (
-            <div key={job.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-[#22345A] bg-[#142544] p-5">
-              <CompanyAvatar name={job.company} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-lg font-bold">{job.title}</p>
-                <p className="text-sm text-[#A9B8D2]">
-                  {job.company} · {job.location} · Posted {formatDate(job.createdAt)}
-                </p>
+            <div key={job.id} className="rounded-2xl border border-[#22345A] bg-[#142544] p-5">
+              <div className="flex items-center gap-4">
+                <CompanyAvatar name={job.company} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-lg font-bold">{job.title}</p>
+                  <p className="text-sm text-[#A9B8D2]">
+                    {job.company} · {job.location} · Posted {formatDate(job.createdAt)}
+                  </p>
+                </div>
+                <StatusBadge status={job.status} />
               </div>
-              <StatusBadge status={job.status} />
-              <Link
-                href={`/dashboard/employer/${job.id}`}
-                className="rounded-lg border border-[#3A5287] px-4 py-2 text-sm font-semibold hover:border-teal-300"
-              >
-                Applicants ({job._count.applications})
-              </Link>
+
+              {/* Actions */}
+              <div className="mt-4 flex flex-wrap gap-3 border-t border-[#22345A] pt-4">
+                <Link href={`/dashboard/employer/${job.id}`} className={btn}>
+                  Applicants ({job._count.applications})
+                </Link>
+                <Link href={`/dashboard/employer/${job.id}/edit`} className={btn}>Edit</Link>
+
+                {/* Close sirf LIVE par, Reopen sirf CLOSED par */}
+                {(job.status === "LIVE" || job.status === "CLOSED") && (
+                  <form action={toggleJobOpen}>
+                    <input type="hidden" name="jobId" value={job.id} />
+                    <button className={btn}>{job.status === "LIVE" ? "Close job" : "Reopen job"}</button>
+                  </form>
+                )}
+              </div>
             </div>
           ))}
         </div>

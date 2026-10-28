@@ -6,6 +6,7 @@ const STYLES: Record<string, string> = {
   REJECTED: "bg-red-400/15 text-red-300",
   LIVE: "bg-emerald-400/15 text-emerald-300",
   CLOSED: "bg-slate-400/15 text-slate-300",
+  HIDDEN: "bg-orange-400/15 text-orange-300",
 };
 
 export default function StatusBadge({ status }: { status: string }) {
