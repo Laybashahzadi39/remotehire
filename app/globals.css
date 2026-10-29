@@ -1,4 +1,159 @@
+
+
+
+
+
+
+
+
+
+
+
+
 @import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* ---------- Dark theme (default) ---------- */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14111f;
+  --surface: #1d1a2c;
+  --raised: #241f38;
+  --line: #2e2a44;
+  --fg: #f1eff9;
+  --muted: #b6b1cc;
+  --faint: #8d88a8;
+  --accent: #ff7a59;
+  --on-accent: #1e0f0a;
+  --accent-ink: #ff9c82;
+  --chip: #2b2645;
+  --chip-fg: #d8d4ee;
+  --shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Light theme ---------- */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #eeebf5;
+  --surface: #f9f8fc;
+  --raised: #f1eef9;
+  --line: #d5d0e3;
+  --fg: #1c1830;
+  --muted: #5a5575;
+  --faint: #6b6685;
+  --accent: #ff7a59;
+  --on-accent: #1e0f0a;
+  --accent-ink: #b93a1c;
+  --chip: #e7e2f4;
+  --chip-fg: #3b3560;
+  --shadow: 0 20px 40px rgba(60, 40, 110, 0.14);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-chip: var(--chip);
+  --color-chip-fg: var(--chip-fg);
+  --shadow-card: var(--shadow);
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+}
+
+/* ======================================================================
+   Purane pages ke rang -> naye tokens.
+   Purane pages mein jo navy/teal likha hai, wo yahan se naye rang
+   (aur light/dark dono) mein badal jata hai.
+   ====================================================================== */
+
+/* Backgrounds */
+[class~="bg-[#0E1A2F]" i] { background-color: var(--bg); }
+[class~="bg-[#142544]" i] { background-color: var(--surface); }
+[class~="bg-[#1C3260]" i],
+[class~="bg-[#22345A]" i] { background-color: var(--chip); }
+[class~="bg-teal-300"] { background-color: var(--accent); }
+[class~="bg-teal-400/15"] { background-color: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+/* Borders */
+[class~="border-[#22345A]" i],
+[class~="border-[#2A4070]" i],
+[class~="border-[#3A5287]" i] { border-color: var(--line); }
+[class~="border-teal-300"] { border-color: var(--accent); }
+[class~="hover:border-teal-300"]:hover,
+[class~="focus:border-teal-300"]:focus { border-color: var(--accent); }
+[class~="focus:ring-teal-300"]:focus { --tw-ring-color: var(--accent); }
+
+/* Text */
+[class~="text-[#E8EEF8]" i] { color: var(--fg); }
+[class~="text-[#A9B8D2]" i],
+[class~="text-[#C9D5EA]" i] { color: var(--muted); }
+[class~="text-[#7D8DAA]" i] { color: var(--faint); }
+[class~="text-[#BFD0EE]" i] { color: var(--chip-fg); }
+[class~="text-[#0E1A2F]" i] { color: var(--on-accent); }
+[class~="text-teal-300"] { color: var(--accent-ink); }
+[class~="placeholder:text-[#7D8DAA]" i]::placeholder { color: var(--faint); }
+[class~="file:bg-[#1C3260]" i]::file-selector-button { background-color: var(--chip); }
+[class~="file:text-[#E8EEF8]" i]::file-selector-button { color: var(--fg); }
+
+/* Light mode mein status badges ka text gehra, taake padha ja sake */
+:root[data-theme="light"] [class~="text-amber-300"] { color: #7a5410; }
+:root[data-theme="light"] [class~="text-sky-300"] { color: #1e5a8a; }
+:root[data-theme="light"] [class~="text-emerald-300"] { color: #17653f; }
+:root[data-theme="light"] [class~="text-red-300"] { color: #b3261e; }
+:root[data-theme="light"] [class~="text-slate-300"] { color: #3b4560; }
+:root[data-theme="light"] [class~="text-orange-300"] { color: #9a4a0d; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* @import "tailwindcss";
 
 :root {
   --background: #ffffff;
@@ -23,4 +178,4 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-}
+} */

@@ -1,123 +1,115 @@
 # RemoteHire: Job Board & Remote Career Portal
 
-A full-stack job board where employers post jobs, admins approve them, and job seekers search and apply. Built with Next.js, TypeScript, Prisma and PostgreSQL.
+A full-stack job board with three role-based dashboards. Employers post jobs, admins moderate them, and job seekers search, filter and apply. Built with Next.js, TypeScript, Prisma and PostgreSQL.
 
-**Live demo:** [your-vercel-link]
-
-![Home page](./screenshots/home.png)
+**Live demo:** https://remotehire-chi.vercel.app
+**Code:** https://github.com/Laybashahzadi39/remotehire
 
 ## Features
 
 **Job seekers**
 - Sign up, log in and browse approved jobs
-- Search jobs by title, company or keyword
-- Apply to a job (duplicate applications are blocked)
-- Track every application status: Pending, Reviewed, Interview, Rejected
+- Search by keyword, filter by work mode (Remote, Hybrid, On-site) and job type, with pagination
+- Profile with headline, skills and summary
+- Private PDF resume upload and an optional cover note on every application
+- Track each application: Pending, Reviewed, Interview, Rejected
+- Report a suspicious job
 
 **Employers**
-- Post new jobs (sent to admin for approval)
-- Manage their own listings and see each job's status
-- View applicants for each job and update their status
+- Post, edit, close and reopen jobs
+- View applicants with profile, cover note and resume, and update their status
+- Trusted employer system: after one approved job, new jobs publish instantly
 
 **Admins**
-- Approve or reject new jobs before they go live
-- Platform overview: users, active jobs and applications
-- View all registered users
-
-**Platform**
-- Role-based access control (Seeker, Employer, Admin) enforced on the server
-- Secure authentication with hashed passwords and signed cookie sessions
-- Input validation on every form
-
-## Tech stack
-
-| Area | Technology |
-|---|---|
-| Framework | Next.js (App Router, Server Components, Server Actions) |
-| Language | TypeScript |
-| Database | PostgreSQL (Neon) |
-| ORM | Prisma |
-| Auth | Cookie sessions with `jose` (JWT) and `bcryptjs` |
-| Validation | Zod |
-| Styling | Tailwind CSS |
-| Deployment | Vercel |
+- Approve or reject new jobs
+- Review reported jobs: take them down or dismiss the reports
+- Block and unblock users (blocked users lose access immediately)
+- Platform overview: users, active jobs, applications and open reports
 
 ## How it works
 
 ```
-Employer posts a job      -> status: PENDING
-Admin approves the job    -> status: LIVE
-Seeker finds and applies  -> application: PENDING
-Employer reviews          -> application: REVIEWED / INTERVIEW / REJECTED
-Seeker tracks the result  -> My applications
+Employer posts a job        -> PENDING (new employer) or LIVE (trusted employer)
+Scam screening              -> money requests are blocked, off-platform contacts go to review
+Admin approves              -> LIVE, and the employer becomes trusted
+Seeker applies              -> application PENDING (resume required)
+Employer reviews            -> REVIEWED / INTERVIEW / REJECTED
+Two reports on a job        -> job is hidden until an admin decides
 ```
 
 ## Key concepts and logic
 
 ### Authentication and sessions
-- Passwords are hashed with **bcrypt** and never stored in plain text.
-- After login, the server creates a signed **JWT** (using `jose`, HS256, 7 day expiry) and stores it in an **httpOnly cookie**, so client-side JavaScript cannot read it.
-- Login failures return one generic message ("Invalid email or password") so attackers cannot find out which emails are registered.
-- The Admin role cannot be created through signup. The signup schema only accepts `SEEKER` or `EMPLOYER`.
+- Passwords are hashed with **bcrypt**.
+- Login creates a signed **JWT** (`jose`, 7 day expiry) stored in an **httpOnly cookie**.
+- On every request the session is verified and the user is checked in the database, so a blocked user is locked out immediately even with an old cookie.
+- Login errors are generic ("Invalid email or password") so emails cannot be guessed.
+- Admin accounts cannot be created through signup.
 
-### Role-based access control (RBAC)
-- A `requireRole()` helper checks the session on every protected page and **again inside every Server Action**, so access is enforced on the server, not only by hiding buttons.
-- Ownership checks: an employer can only view applicants and change statuses for **their own** jobs (queries filter by `employerId`).
+### Authorization
+- A `requireRole()` helper protects every dashboard page **and** every Server Action, so access is enforced on the server.
+- Ownership checks: employers can only see applicants and change statuses for their own jobs.
 
-### Job lifecycle
-```
-PENDING  ->  LIVE  or  CLOSED      (admin approves or rejects)
-```
-Public pages only query `status: "LIVE"`, so unapproved jobs are never visible to seekers. This stops spam listings.
+### Moderation and trust
+- Job statuses: `PENDING`, `LIVE`, `CLOSED`, `REJECTED`, `HIDDEN`. Public pages only show `LIVE` jobs.
+- **Scam screening:** jobs that ask applicants for money are blocked at posting time. Jobs with WhatsApp, Telegram, emails or phone numbers go to admin review, even for trusted employers.
+- **Trusted employers:** one approved job makes an employer trusted, which removes the admin bottleneck for later jobs.
+- **Reports:** one report per user per job (database constraint). Two open reports hide the job automatically (demo threshold), and an admin makes the final decision.
 
-### Application pipeline
-```
-PENDING  ->  REVIEWED  ->  INTERVIEW  /  REJECTED
-```
-- Applying twice is blocked at two levels: an application check in code and a database `@@unique([jobId, seekerId])` constraint.
-- The new status is validated with Zod before it is saved.
+### Resume privacy
+- Resumes are validated (PDF signature check, max 1 MB) and stored in the database, not in a public folder.
+- They are served only through a protected route that allows the seeker or an employer who received that seeker's application, with `Cache-Control: private, no-store`.
 
-### Database (Prisma + PostgreSQL)
-- Three models with relations: `User` 1-to-many `Job`, `Job` 1-to-many `Application`, `User` 1-to-many `Application`.
-- Enums (`Role`, `JobStatus`, `AppStatus`) keep data values valid.
-- Queries use `include` to join related data, `_count` for applicant totals, and `select` so password hashes are never loaded for lists.
-- The admin dashboard runs its queries in parallel with `Promise.all`.
-- A seed script creates demo accounts and sample jobs with one command.
+### Search, filters and pagination
+- Filters live in the URL (`/jobs?q=react&mode=REMOTE&type=FULL_TIME&page=2`), so results are shareable.
+- Values from the URL are checked against allowed lists before they reach the database.
+- Pagination uses `skip` and `take` with a total count.
 
 ### Next.js concepts used
-- **App Router** with file-based routing and **dynamic routes** (`/jobs/[id]`).
-- **Server Components** fetch data directly from the database; **Client Components** are used only for forms that need state.
-- **Server Actions** replace a separate REST API for signup, login, posting jobs, applying and updating statuses.
-- `useActionState` shows server-side validation errors and a pending state in forms.
-- **Cache Components** and **Suspense**: static page shells are prerendered while session and database content streams in.
-- `revalidatePath` refreshes data after a mutation.
-- Search uses URL query strings (`/jobs?q=react`) and a case-insensitive `contains` query across title, company and description.
+- **App Router**, dynamic routes (`/jobs/[id]`), and **Route Handlers** (`/api/resume/[userId]`)
+- **Server Components** for data fetching and **Client Components** only for interactive forms
+- **Server Actions** with `useActionState` instead of a separate REST API
+- **Cache Components** with **Suspense**: static shells prerender while session and database content streams in
+- `revalidatePath` to refresh data after changes
 
 ### Validation
-All forms are validated on the server with **Zod** (types, lengths, allowed values), and the first error message is shown to the user.
+Every form is validated on the server with **Zod**.
+
+## Tech stack
+
+| Area | Technology |
+|---|---|
+| Framework | Next.js (App Router, Server Actions) |
+| Language | TypeScript |
+| Database | PostgreSQL (Neon) |
+| ORM | Prisma |
+| Auth | `jose` (JWT cookies) and `bcryptjs` |
+| Validation | Zod |
+| Styling | Tailwind CSS |
+| Deployment | Vercel |
 
 ## Project structure
 
 ```
-app/            Pages and routes (jobs, dashboards, login, signup)
-actions/        Server Actions: auth, jobs, applications, admin
-components/     Reusable UI (Navbar, JobForm, StatusBadge, CompanyAvatar)
-lib/            Database client, session handling, role checks
-prisma/         Database schema, migrations and seed script
+app/            Pages and routes (jobs, dashboards, login, signup, resume API)
+actions/        Server Actions: auth, jobs, applications, profile, reports, admin
+components/     Reusable UI (Navbar, forms, badges)
+lib/            Database client, session handling, role checks, scam screening
+prisma/         Schema, migrations and seed script
 ```
 
 ## Database design
 
-Three tables: `User`, `Job` and `Application`.
-- A user (employer) has many jobs
-- A job has many applications
-- A user (seeker) has many applications
-- `@@unique([jobId, seekerId])` ensures a seeker can apply only once per job
+`User`, `Profile`, `Job`, `Application` and `Report`.
+- A user (employer) has many jobs; a job has many applications and reports
+- A user (seeker) has one profile and many applications
+- `@@unique([jobId, seekerId])` allows one application per job
+- `@@unique([jobId, reporterId])` allows one report per user per job
 
 ## Run locally
 
 ```bash
-git clone [your-repo-link]
+git clone https://github.com/Laybashahzadi39/remotehire.git
 cd remotehire
 npm install
 ```
@@ -146,25 +138,15 @@ Open http://localhost:3000
 | Admin | admin@test.com | Admin@123 |
 | Employer | employer@test.com | Employer@123 |
 | Seeker | seeker@test.com | Seeker@123 |
+| Seeker | seeker2@test.com | Seeker@123 |
 
 Company names, salaries and jobs are sample data.
 
-## Screenshots
-
-| Jobs | Admin panel | Applicants |
-|---|---|---|
-| ![Jobs](./screenshots/jobs.png) | ![Admin](./screenshots/admin.png) | ![Applicants](./screenshots/applicants.png) |
-
-## What I learned
-
-- Building a full-stack app with the Next.js App Router and Server Actions instead of a separate REST API
-- Designing a relational database with Prisma and PostgreSQL
-- Implementing role-based authorization and protecting data on the server
-- Validating input with Zod and handling sessions securely with cookies
-
 ## Future improvements
 
-- Resume upload and a full seeker profile
-- Job alerts and email notifications
-- Edit and close job listings
-- Pagination and advanced filters (salary, job type)
+- Store resumes in object storage (S3 or Vercel Blob) with signed URLs
+- Email verification and password reset
+- Rate limiting on login and apply
+- Notifications when an application status changes
+- Withdraw applications, saved jobs and job expiry
+- Company profile pages
