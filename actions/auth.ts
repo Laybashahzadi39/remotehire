@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSession, deleteSession } from "@/lib/session";
 import { getClientIp, isBlocked, addHit, clearHits, limitOnce } from "@/lib/rate-limit";
-
+import { sendVerification } from "@/lib/verification";
 export type FormState = { error?: string } | undefined;
 
 const MINUTE = 60;
@@ -39,9 +39,10 @@ export async function signup(prev: FormState, formData: FormData): Promise<FormS
   if (exists) return { error: "An account with this email already exists" };
 
   const hashed = await bcrypt.hash(password, 10);
-  await prisma.user.create({ data: { name, email, password: hashed, role } });
+  const user = await prisma.user.create({ data: { name, email, password: hashed, role } });
+  await sendVerification(user.id, user.email);
 
-  redirect("/login");
+  redirect("/check-email");
 }
 
 // ---------- LOGIN ----------
@@ -78,7 +79,9 @@ export async function login(prev: FormState, formData: FormData): Promise<FormSt
     return { error: "Invalid email or password" };
   }
 
-  if (user.blocked) return { error: "This account has been suspended." };
+  if (!user.emailVerified) {
+    return { error: "Please confirm your email first. Check your inbox, or use 'Resend verification email'." };
+  }
 
   // 4. Correct login: reset the counter and start the session
   await clearHits(emailKey);

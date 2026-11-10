@@ -57,7 +57,8 @@ async function Applicants({ params }: { params: Promise<{ id: string }> }) {
                   <p className="text-lg font-bold">{a.seeker.name}</p>
                   {p?.headline && <p className="text-[#C9D5EA]">{p.headline}</p>}
                   <p className="text-sm text-[#A9B8D2]">
-                    {a.seeker.email}
+                    {/* Contact masking: the email is shown only at the Interview stage */}
+                    {a.status === "INTERVIEW" ? a.seeker.email : "Email hidden until the Interview stage"}
                     {p?.location ? ` · ${p.location}` : ""} · Applied {formatDate(a.createdAt)}
                   </p>
                 </div>

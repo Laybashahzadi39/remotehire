@@ -26,6 +26,11 @@ export default function LoginPage() {
         <button disabled={pending} className="w-full rounded-lg bg-teal-300 py-3 font-bold text-[#0E1A2F] disabled:opacity-60">
           {pending ? "Logging in..." : "Log in"}
         </button>
+        <p className="text-center text-sm">
+          <Link href="/forgot-password" className="text-teal-300">Forgot password?</Link>
+          {" · "}
+          <Link href="/resend-verification" className="text-teal-300">Resend verification email</Link>
+        </p>
 
         <p className="text-center text-sm text-[#A9B8D2]">
           New here? <Link href="/signup" className="text-teal-300">Create an account</Link>

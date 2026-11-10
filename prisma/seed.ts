@@ -19,20 +19,34 @@ type SeedJob = {
 };
 
 const jobs: SeedJob[] = [
-  { title: "Senior React Developer", company: "Northwind Labs", location: "Remote", workMode: "REMOTE", jobType: "FULL_TIME", salary: "$4,000 - $6,000 / month",
-    description: "Build and maintain our customer dashboard using React and TypeScript. You will work closely with designers and backend engineers, review code, and help improve performance across the product." },
-  { title: "Node.js Backend Engineer", company: "Brightpath", location: "Remote", workMode: "REMOTE", jobType: "CONTRACT", salary: "$3,500 - $5,000 / month",
-    description: "Design REST and GraphQL APIs, optimise database queries, and write reliable automated tests. Experience with PostgreSQL and cloud deployment is a plus." },
-  { title: "Full-Stack Developer (Next.js)", company: "Kitepoint", location: "Hybrid · Berlin", workMode: "HYBRID", jobType: "FULL_TIME", salary: "$4,500 - $6,500 / month",
-    description: "Own features end to end, from database schema to polished user interface, using Next.js, Prisma and Tailwind CSS in a small, fast-moving product team." },
-  { title: "UI/UX Designer", company: "Pixel & Co", location: "Remote", workMode: "REMOTE", jobType: "PART_TIME", salary: "$1,800 - $2,500 / month",
-    description: "Create wireframes, prototypes and design systems for web products. You will run user research sessions and turn findings into clear, accessible interfaces." },
-  { title: "Content Creator", company: "Codeoy", location: "Karachi, Pakistan", workMode: "ONSITE", jobType: "FULL_TIME", salary: "$800 - $1,200 / month",
-    description: "Plan and produce blog posts, short videos and social media content for a growing developer community, and track what performs best." },
-  { title: "Product Marketing Manager", company: "Orbit Labs", location: "Remote", workMode: "REMOTE", jobType: "FULL_TIME", salary: "$4,000 - $5,500 / month",
-    description: "Lead product launches, write positioning and messaging, and work with sales and product teams to bring new features to market." },
-  { title: "QA Engineering Intern", company: "Brightpath", location: "Lahore, Pakistan", workMode: "ONSITE", jobType: "INTERNSHIP", salary: "$300 - $500 / month",
-    description: "Learn how to test web applications. You will write test cases, report bugs clearly, and help the team check every release before it goes live." },
+  {
+    title: "Senior React Developer", company: "Northwind Labs", location: "Remote", workMode: "REMOTE", jobType: "FULL_TIME", salary: "$4,000 - $6,000 / month",
+    description: "Build and maintain our customer dashboard using React and TypeScript. You will work closely with designers and backend engineers, review code, and help improve performance across the product."
+  },
+  {
+    title: "Node.js Backend Engineer", company: "Brightpath", location: "Remote", workMode: "REMOTE", jobType: "CONTRACT", salary: "$3,500 - $5,000 / month",
+    description: "Design REST and GraphQL APIs, optimise database queries, and write reliable automated tests. Experience with PostgreSQL and cloud deployment is a plus."
+  },
+  {
+    title: "Full-Stack Developer (Next.js)", company: "Kitepoint", location: "Hybrid · Berlin", workMode: "HYBRID", jobType: "FULL_TIME", salary: "$4,500 - $6,500 / month",
+    description: "Own features end to end, from database schema to polished user interface, using Next.js, Prisma and Tailwind CSS in a small, fast-moving product team."
+  },
+  {
+    title: "UI/UX Designer", company: "Pixel & Co", location: "Remote", workMode: "REMOTE", jobType: "PART_TIME", salary: "$1,800 - $2,500 / month",
+    description: "Create wireframes, prototypes and design systems for web products. You will run user research sessions and turn findings into clear, accessible interfaces."
+  },
+  {
+    title: "Content Creator", company: "Codeoy", location: "Karachi, Pakistan", workMode: "ONSITE", jobType: "FULL_TIME", salary: "$800 - $1,200 / month",
+    description: "Plan and produce blog posts, short videos and social media content for a growing developer community, and track what performs best."
+  },
+  {
+    title: "Product Marketing Manager", company: "Orbit Labs", location: "Remote", workMode: "REMOTE", jobType: "FULL_TIME", salary: "$4,000 - $5,500 / month",
+    description: "Lead product launches, write positioning and messaging, and work with sales and product teams to bring new features to market."
+  },
+  {
+    title: "QA Engineering Intern", company: "Brightpath", location: "Lahore, Pakistan", workMode: "ONSITE", jobType: "INTERNSHIP", salary: "$300 - $500 / month",
+    description: "Learn how to test web applications. You will write test cases, report bugs clearly, and help the team check every release before it goes live."
+  },
 ];
 
 async function main() {
@@ -58,6 +72,7 @@ async function main() {
     data: { name: "Demo Seeker Two", email: "seeker2@test.com", password: await hash("Seeker@123"), role: "SEEKER" },
   });
 
+  await prisma.user.updateMany({ data: { emailVerified: new Date() } });
   const created = [];
   for (const j of jobs) {
     created.push(await prisma.job.create({ data: { ...j, status: "LIVE", employerId: employer.id } }));
