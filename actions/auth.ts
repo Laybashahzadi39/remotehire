@@ -5,21 +5,35 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSession, deleteSession } from "@/lib/session";
+import { getClientIp, isBlocked, addHit, clearHits, limitOnce } from "@/lib/rate-limit";
 
 export type FormState = { error?: string } | undefined;
+
+const MINUTE = 60;
+
+// "Too many attempts. Please try again in 15 minutes."
+function waitMessage(seconds: number) {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  return `Too many attempts. Please try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`;
+}
 
 // ---------- SIGNUP ----------
 const SignupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["SEEKER", "EMPLOYER"]), // ADMIN signup se nahi banega
+  role: z.enum(["SEEKER", "EMPLOYER"]), // ADMIN cannot be created from sign-up
 });
 
 export async function signup(prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = SignupSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { name, email, password, role } = parsed.data;
+
+  // Rate limit: 5 sign-ups per hour from one IP address
+  const ip = await getClientIp();
+  const allowed = await limitOnce(`signup:${ip}`, 5, 60 * MINUTE);
+  if (!allowed.ok) return { error: waitMessage(allowed.retryAfter) };
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return { error: "An account with this email already exists" };
@@ -41,14 +55,33 @@ export async function login(prev: FormState, formData: FormData): Promise<FormSt
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { email, password } = parsed.data;
 
-  // 1. User dhoondo, 2. password match karo
+  // Two keys: one for this email + IP, one for this IP with any email
+  const ip = await getClientIp();
+  const emailKey = `login:${email.toLowerCase()}|${ip}`;
+  const ipKey = `login-ip:${ip}`;
+
+  // 1. Is the visitor locked out already?
+  const emailStatus = await isBlocked(emailKey, 5);
+  const ipStatus = await isBlocked(ipKey, 20);
+  if (emailStatus.blocked || ipStatus.blocked) {
+    return { error: waitMessage(Math.max(emailStatus.retryAfter, ipStatus.retryAfter)) };
+  }
+
+  // 2. Find the user and compare the password
   const user = await prisma.user.findUnique({ where: { email } });
   const match = user ? await bcrypt.compare(password, user.password) : false;
 
-  // Dono galti par ek hi message (security: attacker ko hint nahi milta)
-  if (!user || !match) return { error: "Invalid email or password" };
+  // 3. Wrong login: count the failed attempt (same message for both cases)
+  if (!user || !match) {
+    await addHit(emailKey, 15 * MINUTE);
+    await addHit(ipKey, 15 * MINUTE);
+    return { error: "Invalid email or password" };
+  }
+
   if (user.blocked) return { error: "This account has been suspended." };
 
+  // 4. Correct login: reset the counter and start the session
+  await clearHits(emailKey);
   await createSession(user.id, user.role);
   redirect("/dashboard");
 }

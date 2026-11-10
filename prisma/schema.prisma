@@ -106,6 +106,13 @@ model Report {
   @@unique([jobId, reporterId])   // ek user ek job ko ek hi baar report kare
 }
 
+// One row per "key" (for example: login:seeker@test.com|1.2.3.4)
+model RateLimit {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime           // when the time window ends
+}
+
 enum ReportReason {
   ASKS_FOR_MONEY
   FAKE_COMPANY
