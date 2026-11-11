@@ -39,9 +39,15 @@ export async function signup(prev: FormState, formData: FormData): Promise<FormS
   if (exists) return { error: "An account with this email already exists" };
 
   const hashed = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({ data: { name, email, password: hashed, role } });
-  await sendVerification(user.id, user.email);
+  const requireVerification = process.env.REQUIRE_EMAIL_VERIFICATION === "true";
+  const user = await prisma.user.create({
+    data: { name, email, password: hashed, role, emailVerified: requireVerification ? null : new Date() },
+  });
 
+  // Demo mode: seedha login. Production mein env variable true karein.
+  if (!requireVerification) redirect("/login");
+
+  await sendVerification(user.id, user.email);
   redirect("/check-email");
 }
 
