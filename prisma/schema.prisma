@@ -93,8 +93,12 @@ enum JobStatus {
 enum AppStatus {
   PENDING
   REVIEWED
+  SHORTLISTED
   INTERVIEW
+  OFFER
+  HIRED
   REJECTED
+  WITHDRAWN
 }
 enum WorkMode {
   REMOTE

@@ -7,6 +7,10 @@ const STYLES: Record<string, string> = {
   LIVE: "bg-emerald-400/15 text-emerald-300",
   CLOSED: "bg-slate-400/15 text-slate-300",
   HIDDEN: "bg-orange-400/15 text-orange-300",
+  SHORTLISTED: "bg-sky-400/15 text-sky-300",
+  OFFER: "bg-emerald-400/15 text-emerald-300",
+  HIRED: "bg-emerald-400/25 text-emerald-300",
+  WITHDRAWN: "bg-slate-400/15 text-slate-300",
 };
 
 export default function StatusBadge({ status }: { status: string }) {
