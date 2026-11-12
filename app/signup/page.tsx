@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { signup } from "@/actions/auth";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function SignupPage() {
   // state = server se aaya error, pending = request chal rahi hai
@@ -21,14 +22,14 @@ export default function SignupPage() {
 
         <input name="name" placeholder="Full name" className={input} required />
         <input name="email" type="email" placeholder="Email address" className={input} required />
-        <input name="password" type="password" placeholder="Password (min 8 characters)" className={input} required />
+       <PasswordInput name="password" placeholder="Password (min 8 characters)" className={input} required />
 
         <div className="grid grid-cols-2 gap-3 text-sm text-[#E8EEF8]">
           <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#2A4070] p-3">
-            <input type="radio" name="role" value="SEEKER" defaultChecked /> I'm looking for a job
+            <input type="radio" name="role" value="SEEKER" defaultChecked /> I am looking for a job
           </label>
           <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#2A4070] p-3">
-            <input type="radio" name="role" value="EMPLOYER" /> I'm hiring
+            <input type="radio" name="role" value="EMPLOYER" /> I am hiring
           </label>
         </div>
 

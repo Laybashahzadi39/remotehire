@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { login } from "@/actions/auth";
+import PasswordInput from "@/components/PasswordInput";
+
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, undefined);
@@ -19,7 +21,7 @@ export default function LoginPage() {
         </div>
 
         <input name="email" type="email" placeholder="Email address" className={input} required />
-        <input name="password" type="password" placeholder="Password" className={input} required />
+        <PasswordInput name="password" placeholder="Password" className={input} required />
 
         {state?.error && <p className="text-sm text-red-300">{state.error}</p>}
 

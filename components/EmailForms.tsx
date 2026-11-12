@@ -3,6 +3,10 @@
 import { useActionState, type ReactNode } from "react";
 import Link from "next/link";
 import { requestReset, resendVerification, verifyEmail, resetPassword } from "@/actions/email";
+import PasswordInput from "@/components/PasswordInput";
+
+
+
 
 const input =
   "w-full rounded-full border border-line bg-bg px-5 py-3 text-fg outline-none placeholder:text-faint focus:border-accent";
@@ -54,6 +58,8 @@ export function ResendForm() {
       <form action={action} className="space-y-4">
         <input name="email" type="email" placeholder="Email address" className={input} required />
         <Message error={state?.error} success={state?.success} />
+        {/* <PasswordInput name="password" placeholder="New password" className={input} required />   ..... cnfrm it becz ye replac ni hoi add hoi
+        <PasswordInput name="confirm" placeholder="Confirm new password" className={input} required /> */}
         <button disabled={pending} className={button}>{pending ? "Sending..." : "Send new link"}</button>
       </form>
       {backLink}

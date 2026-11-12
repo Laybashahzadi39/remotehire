@@ -13,6 +13,10 @@ const EmailSchema = z.object({ email: z.string().email("Enter a valid email addr
 
 // ---------- Forgot password ----------
 export async function requestReset(prev: EmailState, formData: FormData): Promise<EmailState> {
+  // Live site par email service set nahi to saaf bata do (jhoota success nahi)
+  if (process.env.NODE_ENV === "production" && !process.env.RESEND_API_KEY) {
+    return { error: "Email service is not configured yet." };
+  }
   const parsed = EmailSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
