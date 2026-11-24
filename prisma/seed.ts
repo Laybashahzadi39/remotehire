@@ -75,7 +75,7 @@ async function main() {
   await prisma.user.updateMany({ data: { emailVerified: new Date() } });
   const created = [];
   for (const j of jobs) {
-    created.push(await prisma.job.create({ data: { ...j, status: "LIVE", employerId: employer.id } }));
+        created.push(await prisma.job.create({ data: { ...j, status: "LIVE", employerId: employer.id, expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } }));
   }
 
   // Pehle seeker ki 2 applications, alag status (pipeline dikhane ke liye)

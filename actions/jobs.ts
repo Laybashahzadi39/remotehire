@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { screenJob } from "@/lib/scam";
+import { newExpiryDate } from "@/lib/job-filter";
 import type { FormState } from "@/actions/auth";
 
 const JobSchema = z.object({
@@ -21,14 +22,13 @@ const JobSchema = z.object({
 const BLOCK_MESSAGE =
   "This job appears to ask applicants for money. Employers must never charge applicants, so it cannot be posted.";
 
-// ---------- Nayi job ----------
+// ---------- New job ----------
 export async function createJob(prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireRole("EMPLOYER");
 
   const parsed = JobSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
-  // Scam check: title + description
   const screen = screenJob(`${parsed.data.title} ${parsed.data.description}`);
   if (screen === "BLOCK") return { error: BLOCK_MESSAGE };
 
@@ -37,13 +37,16 @@ export async function createJob(prev: FormState, formData: FormData): Promise<Fo
     select: { trusted: true },
   });
 
+  // Trusted employer + saaf content = seedha LIVE (aur 30 din ki expiry)
+  const goesLive = screen !== "REVIEW" && !!employer?.trusted;
+
   await prisma.job.create({
     data: {
       ...parsed.data,
       salary: parsed.data.salary || null,
       employerId: session.userId,
-      // Shak wali job trusted employer ki bhi review mein jati hai
-      status: screen === "REVIEW" ? "PENDING" : employer?.trusted ? "LIVE" : "PENDING",
+      status: goesLive ? "LIVE" : "PENDING",
+      expiresAt: goesLive ? newExpiryDate() : null,
     },
   });
 
@@ -51,7 +54,7 @@ export async function createJob(prev: FormState, formData: FormData): Promise<Fo
   redirect("/dashboard/employer");
 }
 
-// ---------- Job edit ----------
+// ---------- Edit job ----------
 export async function updateJob(prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireRole("EMPLOYER");
   const jobId = String(formData.get("jobId"));
@@ -62,7 +65,6 @@ export async function updateJob(prev: FormState, formData: FormData): Promise<Fo
   const screen = screenJob(`${parsed.data.title} ${parsed.data.description}`);
   if (screen === "BLOCK") return { error: BLOCK_MESSAGE };
 
-  // Sirf apni job edit ho sakti hai
   const job = await prisma.job.findFirst({ where: { id: jobId, employerId: session.userId } });
   if (!job) return { error: "Job not found" };
 
@@ -91,8 +93,23 @@ export async function toggleJobOpen(formData: FormData) {
   if (job.status === "LIVE") {
     await prisma.job.update({ where: { id: jobId }, data: { status: "CLOSED" } });
   } else if (job.status === "CLOSED") {
-    await prisma.job.update({ where: { id: jobId }, data: { status: "LIVE" } });
+    // Dobara kholne par naye 30 din
+    await prisma.job.update({ where: { id: jobId }, data: { status: "LIVE", expiresAt: newExpiryDate() } });
   }
+
+  revalidatePath("/dashboard/employer");
+  revalidatePath("/jobs");
+}
+
+// ---------- Renew: 30 din aur ----------
+export async function renewJob(formData: FormData) {
+  const session = await requireRole("EMPLOYER");
+  const jobId = String(formData.get("jobId"));
+
+  const job = await prisma.job.findFirst({ where: { id: jobId, employerId: session.userId } });
+  if (!job || !["LIVE", "CLOSED"].includes(job.status)) return; // PENDING/REJECTED admin ke control mein
+
+  await prisma.job.update({ where: { id: jobId }, data: { status: "LIVE", expiresAt: newExpiryDate() } });
 
   revalidatePath("/dashboard/employer");
   revalidatePath("/jobs");

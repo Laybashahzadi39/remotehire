@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { audit } from "@/lib/audit";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
@@ -8,10 +9,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ userId:
   const session = await getSession();
   if (!session) return new Response("Unauthorized", { status: 401 });
 
-  // 2. Kaun dekh sakta hai: khud seeker...
+  // 2. Kaun dekh sakta hai: khud seeker, ya wo employer jis ne application receive ki
   let allowed = session.userId === userId;
-
-  // ...ya wo employer jis ki job par is seeker ne apply kiya
   if (!allowed && session.role === "EMPLOYER") {
     const application = await prisma.application.findFirst({
       where: { seekerId: userId, job: { employerId: session.userId } },
@@ -21,18 +20,23 @@ export async function GET(_req: Request, { params }: { params: Promise<{ userId:
   }
   if (!allowed) return new Response("Forbidden", { status: 403 });
 
-  // 3. File bhejo
+  // 3. File
   const profile = await prisma.profile.findUnique({
     where: { userId },
     select: { resumeData: true },
   });
   if (!profile?.resumeData) return new Response("Not found", { status: 404 });
 
+  // 4. Resume access log: kisi aur ne dekha to record
+  if (session.userId !== userId) {
+    await audit(session.userId, "RESUME_VIEWED", "USER", userId, session.role);
+  }
+
   return new Response(new Uint8Array(profile.resumeData), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": 'inline; filename="resume.pdf"',
-      "Cache-Control": "private, no-store", // kisi cache mein save na ho
+      "Cache-Control": "private, no-store",
     },
   });
 }

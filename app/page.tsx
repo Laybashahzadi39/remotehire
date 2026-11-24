@@ -1,25 +1,14 @@
-
-
-
-
-
-
-
-
-
-
-
 import { Suspense } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import CompanyAvatar from "@/components/CompanyAvatar";
-
+import { liveJobFilter } from "@/lib/job-filter";
 const CATEGORIES = ["Frontend", "Backend", "Design", "Marketing"];
 
 // Latest 3 LIVE jobs database se
 async function FeaturedJobs() {
   const jobs = await prisma.job.findMany({
-    where: { status: "LIVE" },
+    where: await liveJobFilter(),
     orderBy: { createdAt: "desc" },
     take: 3,
   });
@@ -183,9 +172,9 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-line px-4 py-8 text-center text-sm text-faint">
+      {/* <footer className="border-t border-line px-4 py-8 text-center text-sm text-faint">
         © RemoteHire. All rights reserved.
-      </footer>
+      </footer> */}
     </main>
   );
 }
